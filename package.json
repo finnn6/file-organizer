@@ -1,0 +1,35 @@
+{
+	"name": "file-organizer",
+	"version": "1.0.0",
+	"description": "",
+	"type": "module",
+	"main": "src/main/main.cjs",
+	"scripts": {
+		"dev:vite": "vite",
+		"dev:electron": "cross-env NODE_ENV=development electron .",
+		"dev": "concurrently \"npm run dev:vite\" \"npm run dev:electron\""
+	},
+	"dependencies": {
+		"react": "^19.1.1",
+		"react-dom": "^19.1.1"
+	},
+	"devDependencies": {
+		"@vitejs/plugin-react": "^4.0.4",
+		"concurrently": "^9.2.1",
+		"cross-env": "^10.0.0",
+		"electron": "^26.6.10",
+		"vite": "^4.5.3",
+		"wait-on": "^8.0.4"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/finnn6/file-organizer.git"
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"bugs": {
+		"url": "https://github.com/finnn6/file-organizer/issues"
+	},
+	"homepage": "https://github.com/finnn6/file-organizer#readme"
+}
