@@ -124,6 +124,17 @@ const AdvancedFileTable = ({ files }) => {
     })
   }
 
+  // 행 클릭 핸들러 추가
+  const handleRowClick = (index) => {
+    handleSelectFile(index)
+  }
+
+  // 체크박스 클릭 핸들러 (이벤트 전파 방지)
+  const handleCheckboxClick = (e, index) => {
+    e.stopPropagation() // 행 클릭 이벤트 전파 방지
+    handleSelectFile(index)
+  }
+
   const handleSelectAll = () => {
     if (selectedFiles.size === sortedFiles.length) {
       setSelectedFiles(new Set())
@@ -182,7 +193,7 @@ const AdvancedFileTable = ({ files }) => {
 
       {/* Flowbite 테이블 */}
       <div className="overflow-x-auto max-h-96">
-        <Table hoverable striped>
+        <Table hoverable>
           <TableHead>
             <TableRow>
               <TableHeadCell className="!p-4">
@@ -237,14 +248,15 @@ const AdvancedFileTable = ({ files }) => {
               return (
                 <TableRow 
                   key={fileId}
-                  className={`transition-colors ${
+                  className={`transition-colors cursor-pointer ${
                     isSelected ? 'bg-blue-50 border-blue-200' : 'bg-white hover:bg-gray-50'
                   }`}
+                  onClick={() => handleRowClick(index)}
                 >
                   <TableCell className="!p-4">
                     <Checkbox 
                       checked={isSelected}
-                      onChange={() => handleSelectFile(index)}
+                      onChange={(e) => handleCheckboxClick(e, index)}
                     />
                   </TableCell>
                   <TableCell className="font-medium text-gray-900">

@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react'
-import { Button, Card, Alert, Spinner } from 'flowbite-react'
-import { HiFolder, HiSearch } from 'react-icons/hi'
+import { Button, Card, Alert, Spinner, Badge } from 'flowbite-react'
+import { HiFolder, HiSearch, HiDuplicate, HiTrash } from 'react-icons/hi'
 import SearchBar from './SearchBar'
 import AdvancedFileTable from './AdvancedFileTable'
 
@@ -8,8 +8,11 @@ const FolderCleanup = () => {
   const [selectedFolder, setSelectedFolder] = useState('')
   const [files, setFiles] = useState([])
   const [filteredFiles, setFilteredFiles] = useState([])
+  const [duplicateFiles, setDuplicateFiles] = useState([])
   const [loading, setLoading] = useState(false)
+  const [duplicateLoading, setDuplicateLoading] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [showingDuplicates, setShowingDuplicates] = useState(false)
 
   const handleSelectFolder = async () => {
     try {
@@ -24,6 +27,8 @@ const FolderCleanup = () => {
         setFilteredFiles(fileList)
         setLoading(false)
         setSearchQuery('') // 검색 초기화
+        setShowingDuplicates(false) // 중복 파일 모드 해제
+        setDuplicateFiles([]) // 중복 파일 초기화
       }
     } catch (error) {
       console.error('폴더 선택 에러:', error)
@@ -31,16 +36,81 @@ const FolderCleanup = () => {
     }
   }
 
+  // 중복 파일 탐색 함수
+  const handleFindDuplicates = async () => {
+    try {
+      setDuplicateLoading(true)
+      
+      // 파일 해시나 크기+이름으로 중복 파일 찾기
+      const duplicates = await window.electronAPI?.findDuplicateFiles(selectedFolder)
+      
+      if (duplicates && duplicates.length > 0) {
+        setDuplicateFiles(duplicates)
+        setFilteredFiles(duplicates)
+        setShowingDuplicates(true)
+        setSearchQuery('') // 검색 초기화
+      } else {
+        // 중복 파일이 없는 경우 알림
+        alert('중복 파일이 발견되지 않았습니다.')
+      }
+    } catch (error) {
+      console.error('중복 파일 탐색 에러:', error)
+      alert('중복 파일 탐색 중 오류가 발생했습니다.')
+    } finally {
+      setDuplicateLoading(false)
+    }
+  }
+
+  // 중복 파일 정리 함수
+  const handleCleanDuplicates = async () => {
+    if (duplicateFiles.length === 0) return
+
+    const confirmClean = window.confirm(
+      `${duplicateFiles.length}개의 중복 파일을 정리하시겠습니까?\n(원본을 제외한 중복본들이 삭제됩니다)`
+    )
+
+    if (confirmClean) {
+      try {
+        setLoading(true)
+        await window.electronAPI?.cleanDuplicateFiles(duplicateFiles)
+        
+        // 파일 목록 다시 불러오기
+        const fileList = await window.electronAPI.getFiles(selectedFolder)
+        setFiles(fileList)
+        setFilteredFiles(fileList)
+        setDuplicateFiles([])
+        setShowingDuplicates(false)
+        
+        alert('중복 파일 정리가 완료되었습니다.')
+      } catch (error) {
+        console.error('중복 파일 정리 에러:', error)
+        alert('중복 파일 정리 중 오류가 발생했습니다.')
+      } finally {
+        setLoading(false)
+      }
+    }
+  }
+
+  // 전체 파일 보기로 돌아가기
+  const handleShowAllFiles = () => {
+    setShowingDuplicates(false)
+    setFilteredFiles(files)
+    setSearchQuery('')
+  }
+
   const handleSearch = useCallback((query, filters, activeFilters = [], searchMode = 'OR') => {
     setSearchQuery(query)
 
+    // 중복 파일 모드일 때는 중복 파일에서만 검색
+    const sourceFiles = showingDuplicates ? duplicateFiles : files
+
     // 텍스트 검색이 없고 활성 필터도 없으면 모든 파일 표시
     if (!query.trim() && activeFilters.length === 0) {
-      setFilteredFiles(files)
+      setFilteredFiles(sourceFiles)
       return
     }
 
-    const filtered = files.filter(file => {
+    const filtered = sourceFiles.filter(file => {
       let textMatches = false
       let filterMatches = false
 
@@ -68,15 +138,15 @@ const FolderCleanup = () => {
         })
 
         if (searchMode === 'AND') {
-          filterMatches = filterResults.every(result => result) // 모든 조건 만족
+          filterMatches = filterResults.every(result => result)
         } else {
-          filterMatches = filterResults.some(result => result) // 하나라도 만족
+          filterMatches = filterResults.some(result => result)
         }
       }
 
       // 텍스트 검색과 필터 검색 결과 결합
       if (query.trim() && activeFilters.length > 0) {
-        return textMatches || filterMatches // 텍스트 검색 OR 필터 검색
+        return textMatches || filterMatches
       } else if (query.trim()) {
         return textMatches
       } else if (activeFilters.length > 0) {
@@ -87,16 +157,14 @@ const FolderCleanup = () => {
     })
 
     setFilteredFiles(filtered)
-  }, [files])
+  }, [files, duplicateFiles, showingDuplicates])
 
   const checkExtensionFilter = (file, query) => {
-    // 기존 확장자 검색 로직 유지 (이미 잘 작동함)
     return file.extension?.toLowerCase().includes(query.toLowerCase()) ||
            file.name.toLowerCase().includes(query.toLowerCase())
   }
 
   const checkSizeFilter = (fileSize, query) => {
-    // 크기 필터 로직 (">100MB", "<1KB", ">=50MB" 등)
     const sizeMatch = query.match(/^([<>]=?)\s*(\d+(?:\.\d+)?)\s*(B|KB|MB|GB)$/i)
     if (!sizeMatch) return false
 
@@ -114,7 +182,6 @@ const FolderCleanup = () => {
   }
 
   const checkDateFilter = (fileDate, query) => {
-    // 날짜 필터 로직 ("older:30days", "newer:1week", "older:2months" 등)
     const dateMatch = query.match(/^(older|newer):(\d+)(days?|weeks?|months?|years?)$/i)
     if (!dateMatch) return false
 
@@ -155,7 +222,6 @@ const FolderCleanup = () => {
   }
 
   const handleOrganize = () => {
-    // TODO: 파일 정리 로직 구현
     console.log('정리할 파일들:', filteredFiles)
   }
 
@@ -166,7 +232,7 @@ const FolderCleanup = () => {
         <div className="flex items-center gap-4">
           <HiFolder className="text-3xl text-blue-500" />
           <div className="flex-1">
-            <h2 className="text-xl font-semibold mb-2">1. 폴더 선택</h2>
+            <h2 className="text-xl font-semibold mb-2">폴더 선택</h2>
             <Button onClick={handleSelectFolder} color="blue" size="lg">
               📁 폴더 선택하기
             </Button>
@@ -185,7 +251,72 @@ const FolderCleanup = () => {
         )}
       </Card>
 
-      {/* 검색 섹션 - 파일이 있을 때만 표시하고 파일 목록 카드 안에 포함 */}
+      {/* 중복 파일 관리 섹션 */}
+      {selectedFolder && (
+        <Card>
+          <div className="flex items-center gap-4">
+            <HiDuplicate className="text-3xl text-orange-500" />
+            <div className="flex-1">
+              <h2 className="text-xl font-semibold mb-2">중복 파일 관리</h2>
+              <div className="flex gap-3">
+                <Button
+                  onClick={handleFindDuplicates}
+                  color="warning"
+                  size="lg"
+                  disabled={duplicateLoading || loading}
+                >
+                  {duplicateLoading ? (
+                    <>
+                      <Spinner aria-label="Loading" size="sm" className="mr-2" />
+                      탐색 중...
+                    </>
+                  ) : (
+                    <>
+                      🔍 중복 파일 탐색
+                    </>
+                  )}
+                </Button>
+
+                {duplicateFiles.length > 0 && (
+                  <Button
+                    onClick={handleCleanDuplicates}
+                    color="failure"
+                    size="lg"
+                    disabled={duplicateLoading || loading}
+                  >
+                    🗑️ 중복 파일 정리
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* 중복 파일 통계 */}
+          {duplicateFiles.length > 0 && (
+            <Alert color="warning" className="mt-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="font-medium">중복 파일 발견:</span>
+                  <Badge color="warning" className="ml-2">
+                    {duplicateFiles.length}개 파일
+                  </Badge>
+                </div>
+                {showingDuplicates && (
+                  <Button
+                    onClick={handleShowAllFiles}
+                    color="gray"
+                    size="sm"
+                  >
+                    전체 파일 보기
+                  </Button>
+                )}
+              </div>
+            </Alert>
+          )}
+        </Card>
+      )}
+
+      {/* 로딩 */}
       {loading && (
         <Card className="text-center">
           <div className="flex items-center justify-center gap-3 py-8">
@@ -200,11 +331,16 @@ const FolderCleanup = () => {
         <Card>
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-semibold">
-              3. 파일 목록
+              {showingDuplicates ? '중복 파일 목록' : '파일 목록'}
               {searchQuery && (
                 <span className="text-sm font-normal text-gray-600 ml-2">
                   (검색: "{searchQuery}")
                 </span>
+              )}
+              {showingDuplicates && (
+                <Badge color="warning" className="ml-2">
+                  중복 파일만 표시
+                </Badge>
               )}
             </h2>
             <div className="text-sm text-gray-600">
@@ -212,7 +348,7 @@ const FolderCleanup = () => {
             </div>
           </div>
 
-          {/* 검색바를 파일 목록 카드 안으로 이동 */}
+          {/* 검색바 */}
           <div className="mb-6">
             <SearchBar onSearch={handleSearch} />
           </div>
@@ -220,14 +356,34 @@ const FolderCleanup = () => {
           <AdvancedFileTable files={filteredFiles} />
 
           <div className="mt-6 text-center">
-            <Button
-              color="success"
-              size="lg"
-              onClick={handleOrganize}
-              disabled={filteredFiles.length === 0}
-            >
-              🚀 모든 파일 정리하기
-            </Button>
+            {showingDuplicates ? (
+              <div className="flex gap-3 justify-center">
+                <Button
+                  color="failure"
+                  size="lg"
+                  onClick={handleCleanDuplicates}
+                  disabled={filteredFiles.length === 0}
+                >
+                  🗑️ 선택된 중복 파일 정리
+                </Button>
+                <Button
+                  color="gray"
+                  size="lg"
+                  onClick={handleShowAllFiles}
+                >
+                  전체 파일 보기
+                </Button>
+              </div>
+            ) : (
+              <Button
+                color="success"
+                size="lg"
+                onClick={handleOrganize}
+                disabled={filteredFiles.length === 0}
+              >
+                🚀 모든 파일 정리하기
+              </Button>
+            )}
           </div>
         </Card>
       )}
