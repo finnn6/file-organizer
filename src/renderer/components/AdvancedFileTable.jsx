@@ -51,8 +51,8 @@ const AdvancedFileTable = ({ files }) => {
     if (sortConfig.key !== columnKey) {
       return <HiSelector className="w-4 h-4 text-gray-400 ml-2" />
     }
-    return sortConfig.direction === 'asc' ? 
-      <HiChevronUp className="w-4 h-4 text-blue-600 ml-2" /> : 
+    return sortConfig.direction === 'asc' ?
+      <HiChevronUp className="w-4 h-4 text-blue-600 ml-2" /> :
       <HiChevronDown className="w-4 h-4 text-blue-600 ml-2" />
   }
 
@@ -80,9 +80,9 @@ const AdvancedFileTable = ({ files }) => {
     const codeExts = ['.js', '.jsx', '.ts', '.tsx', '.py', '.java', '.cpp', '.c', '.html', '.css']
     const archiveExts = ['.zip', '.rar', '.7z', '.tar', '.gz']
     const appExts = ['.app', '.exe', '.dmg', '.pkg', '.msi']
-    
+
     if (!extension) return '📄'
-    
+
     const ext = extension.toLowerCase()
     if (imageExts.includes(ext)) return '🖼️'
     if (docExts.includes(ext)) return '📄'
@@ -92,7 +92,7 @@ const AdvancedFileTable = ({ files }) => {
     if (archiveExts.includes(ext)) return '🗜️'
     if (appExts.includes(ext)) return '📱'
     if (ext === '.ds_store') return '👻'
-    
+
     return '📁'
   }
 
@@ -175,11 +175,11 @@ const AdvancedFileTable = ({ files }) => {
             </div>
           )}
         </div>
-        
+
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-600">페이지 크기:</span>
-          <Select 
-            value={pageSize} 
+          <Select
+            value={pageSize}
             onChange={(e) => setPageSize(Number(e.target.value))}
             sizing="sm"
           >
@@ -197,12 +197,17 @@ const AdvancedFileTable = ({ files }) => {
           <TableHead>
             <TableRow>
               <TableHeadCell className="!p-4">
-                <Checkbox 
+                <Checkbox
                   checked={selectedFiles.size === sortedFiles.length && sortedFiles.length > 0}
                   onChange={handleSelectAll}
                 />
               </TableHeadCell>
-              <TableHeadCell 
+              {files.length > 0 && files[0].isOriginal !== undefined && (
+                <TableHeadCell>
+                  상태
+                </TableHeadCell>
+              )}
+              <TableHeadCell
                 className="cursor-pointer hover:bg-gray-100 select-none"
                 onClick={() => handleSort('name')}
               >
@@ -211,7 +216,7 @@ const AdvancedFileTable = ({ files }) => {
                   {getSortIcon('name')}
                 </div>
               </TableHeadCell>
-              <TableHeadCell 
+              <TableHeadCell
                 className="cursor-pointer hover:bg-gray-100 select-none"
                 onClick={() => handleSort('size')}
               >
@@ -220,7 +225,7 @@ const AdvancedFileTable = ({ files }) => {
                   {getSortIcon('size')}
                 </div>
               </TableHeadCell>
-              <TableHeadCell 
+              <TableHeadCell
                 className="cursor-pointer hover:bg-gray-100 select-none"
                 onClick={() => handleSort('modified')}
               >
@@ -229,7 +234,7 @@ const AdvancedFileTable = ({ files }) => {
                   {getSortIcon('modified')}
                 </div>
               </TableHeadCell>
-              <TableHeadCell 
+              <TableHeadCell
                 className="cursor-pointer hover:bg-gray-100 select-none"
                 onClick={() => handleSort('extension')}
               >
@@ -244,20 +249,25 @@ const AdvancedFileTable = ({ files }) => {
             {paginatedFiles.map((file, index) => {
               const fileId = startIndex + index
               const isSelected = selectedFiles.has(fileId)
-              
+
               return (
-                <TableRow 
+                <TableRow
                   key={fileId}
-                  className={`transition-colors cursor-pointer ${
-                    isSelected ? 'bg-blue-50 border-blue-200' : 'bg-white hover:bg-gray-50'
-                  }`}
+                  className={`transition-colors cursor-pointer ${isSelected ? 'bg-blue-50 border-blue-200' : 'bg-white hover:bg-gray-50'
+                    }`}
                   onClick={() => handleRowClick(index)}
                 >
                   <TableCell className="!p-4">
-                    <Checkbox 
+                    <Checkbox
                       checked={isSelected}
                       onChange={(e) => handleCheckboxClick(e, index)}
                     />
+                  </TableCell>
+                  <TableCell>
+                    {file.isOriginal ?
+                      <Badge color="success" size="xs" className="w-fit">원본</Badge> :
+                      <Badge color="failure" size="xs" className="w-fit">중복</Badge>
+                    }
                   </TableCell>
                   <TableCell className="font-medium text-gray-900">
                     <div className="flex items-center gap-3">
@@ -281,9 +291,9 @@ const AdvancedFileTable = ({ files }) => {
                     {formatDate(file.modified)}
                   </TableCell>
                   <TableCell>
-                    <Badge 
+                    <Badge
                       color={getCategoryColor(file.extension)}
-                      className="text-xs"
+                      className="text-xs w-fit"
                     >
                       {file.extension || 'None'}
                     </Badge>
@@ -301,7 +311,7 @@ const AdvancedFileTable = ({ files }) => {
           <div className="text-sm text-gray-600">
             {startIndex + 1} - {Math.min(startIndex + pageSize, sortedFiles.length)} of {sortedFiles.length}
           </div>
-          
+
           <div className="flex items-center gap-2">
             <Button
               size="sm"
@@ -319,11 +329,11 @@ const AdvancedFileTable = ({ files }) => {
             >
               이전
             </Button>
-            
+
             <span className="px-3 py-1 text-sm bg-gray-100 rounded">
               {currentPage} / {totalPages}
             </span>
-            
+
             <Button
               size="sm"
               color="gray"
@@ -356,8 +366,8 @@ const AdvancedFileTable = ({ files }) => {
             </span>
           </div>
           <div className="flex gap-2">
-            <Button 
-              size="sm" 
+            <Button
+              size="sm"
               color="blue"
               onClick={() => {
                 // TODO: 선택된 파일들만 정리
@@ -366,8 +376,8 @@ const AdvancedFileTable = ({ files }) => {
             >
               선택된 파일 정리
             </Button>
-            <Button 
-              size="sm" 
+            <Button
+              size="sm"
               color="gray"
               onClick={() => setSelectedFiles(new Set())}
             >
