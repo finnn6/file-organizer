@@ -2,7 +2,8 @@ import React, { useState, useMemo } from 'react'
 import { Button, Checkbox, Badge, Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow, Select } from 'flowbite-react'
 import { HiChevronUp, HiChevronDown, HiSelector } from 'react-icons/hi'
 
-const AdvancedFileTable = ({ files }) => {
+const AdvancedFileTable = ({ files, showDuplicateInfo = false }) => {
+  console.log(files)
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' })
   const [selectedFiles, setSelectedFiles] = useState(new Set())
   const [currentPage, setCurrentPage] = useState(1)
@@ -202,7 +203,7 @@ const AdvancedFileTable = ({ files }) => {
                   onChange={handleSelectAll}
                 />
               </TableHeadCell>
-              {files.length > 0 && files[0].isOriginal !== undefined && (
+              {showDuplicateInfo && (
                 <TableHeadCell>
                   상태
                 </TableHeadCell>
@@ -263,12 +264,17 @@ const AdvancedFileTable = ({ files }) => {
                       onChange={(e) => handleCheckboxClick(e, index)}
                     />
                   </TableCell>
-                  <TableCell>
-                    {file.isOriginal ?
-                      <Badge color="success" size="xs" className="w-fit">원본</Badge> :
-                      <Badge color="failure" size="xs" className="w-fit">중복</Badge>
-                    }
-                  </TableCell>
+                  {
+                    showDuplicateInfo && (
+                      <TableCell>
+                        {
+                          file.isOriginal ?
+                          <Badge color="success" size="xs" className="w-fit">원본</Badge> :
+                          <Badge color="failure" size="xs" className="w-fit">중복</Badge>
+                        }
+                      </TableCell>
+                    )
+                  }
                   <TableCell className="font-medium text-gray-900">
                     <div className="flex items-center gap-3">
                       <span className="text-xl">{getFileIcon(file.extension)}</span>

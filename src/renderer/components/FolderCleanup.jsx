@@ -45,7 +45,6 @@ const FolderCleanup = () => {
 
       const result = await window.electronAPI?.findDuplicateFiles(selectedFolder)
 
-      // 올바른 체크: result.duplicateFiles.length
       if (result && result.duplicateFiles && result.duplicateFiles.length > 0) {
         setDuplicateFiles(result.duplicateFiles)  // 파일 배열만
         setFilteredFiles(result.duplicateFiles)
@@ -54,7 +53,6 @@ const FolderCleanup = () => {
 
         console.log(`중복 파일 ${result.duplicateFiles.length}개 발견!`)
       } else {
-        // 중복 파일이 없는 경우 알림
         alert('중복 파일이 발견되지 않았습니다.')
       }
     } catch (error) {
@@ -80,10 +78,10 @@ const FolderCleanup = () => {
 
         // 파일 목록 다시 불러오기
         const fileList = await window.electronAPI.getFiles(selectedFolder)
-        setFiles(fileList)
-        setFilteredFiles(fileList)
         setDuplicateFiles([])
         setShowingDuplicates(false)
+        setFiles(fileList)
+        setFilteredFiles(fileList)
 
         alert('중복 파일 정리가 완료되었습니다.')
       } catch (error) {
@@ -99,6 +97,7 @@ const FolderCleanup = () => {
   const handleShowAllFiles = () => {
     setShowingDuplicates(false)
     setFilteredFiles(files)
+    setDuplicateFiles([])
     setSearchQuery('')
   }
 
@@ -353,7 +352,7 @@ const FolderCleanup = () => {
           </div>
 
           {/* 중복 파일 테이블 (기존 AdvancedFileTable 사용하되 중복 정보 표시) */}
-          <AdvancedFileTable files={filteredFiles} />
+          <AdvancedFileTable files={filteredFiles} showDuplicateInfo={true} />
 
           <div className="mt-6 text-center">
             <div className="flex gap-3 justify-center">

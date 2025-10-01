@@ -62,7 +62,7 @@ ipcMain.handle('get-files', async (event, folderPath) => {
   }
 })
 
-// 중복 파일 탐색 (정확한 방식)
+// 중복 파일 탐색
 ipcMain.handle('find-duplicate-files', async (event, folderPath) => {
   try {
     console.log('중복 파일 탐색 시작:', folderPath)
@@ -75,7 +75,6 @@ ipcMain.handle('find-duplicate-files', async (event, folderPath) => {
       try {
         // 빈 파일 제외
         if (file.size === 0) {
-          console.log(`빈 파일 제외: ${file.name}`)
           continue
         }
         
@@ -93,7 +92,7 @@ ipcMain.handle('find-duplicate-files', async (event, folderPath) => {
     
     for (const [hash, files] of fileHashes) {
       if (files.length > 1) {
-        files.sort((a, b) => new Date(a.modified) - new Date(b.modified))
+        files.sort((a, b) => a.modified - b.modified)
 
         duplicateGroups.push({
           hash,
@@ -138,20 +137,19 @@ ipcMain.handle('find-duplicate-files', async (event, folderPath) => {
 // 중복 파일 정리
 ipcMain.handle('clean-duplicate-files', async (event, duplicateData) => {
   try {
-    const { duplicateGroups } = duplicateData
     let deletedCount = 0
     let freedSpace = 0
     const errors = []
     
-    for (const group of duplicateGroups) {
-      for (const duplicate of group.duplicates) {
+    for (const file of duplicateData) {
+      if (file.canDelete) {
         try {
-          await fs.unlink(duplicate.path)
+          await fs.unlink(file.path)
           deletedCount++
-          freedSpace += duplicate.size
+          freedSpace += file.size
         } catch (error) {
           errors.push({
-            file: duplicate.path,
+            file: file.path,
             error: error.message
           })
         }
